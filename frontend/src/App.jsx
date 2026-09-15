@@ -12,30 +12,40 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import Sidebar from "./components/Sidebar";
 import {
-  Check,
+  BadgeCheck,
+  Archive,
+  ChevronDown,
+  Circle,
   CirclePlus,
-  Clock3,
   GripVertical,
-  Inbox,
-  LoaderCircle,
+  Command,
   Pencil,
+  ListTodo,
   Plus,
+  MoreHorizontal,
+  PanelLeft,
   Search,
+  Star,
+  Moon,
+  Sun,
+  Settings2,
   Trash2,
+  UserRound,
   X,
 } from "lucide-react";
 
 const columns = [
-  { id: "backlog", label: "Backlog", color: "bg-slate-300", icon: Inbox },
-  { id: "todo", label: "Todo", color: "bg-lemon", icon: Clock3 },
+  { id: "backlog", label: "Backlog", color: "tone-slate", icon: Archive },
+  { id: "todo", label: "Todo", color: "tone-yellow", icon: ListTodo },
   {
     id: "in-progress",
     label: "In progress",
-    color: "bg-coral",
-    icon: LoaderCircle,
+    color: "tone-coral",
+    icon: Sun,
   },
-  { id: "done", label: "Done", color: "bg-mint", icon: Check },
+  { id: "done", label: "Done", color: "tone-blue", icon: BadgeCheck },
 ];
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 async function request(url, options = {}) {
@@ -64,6 +74,9 @@ export default function App() {
   const [modal, setModal] = useState(null);
   const [toast, setToast] = useState("");
   const [connectionState, setConnectionState] = useState("connecting");
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem("kanban-theme") || "dark",
+  );
   const pending = useRef(new Set());
   const snapshots = useRef(new Map());
   const deferredEvents = useRef(new Map());
@@ -145,6 +158,10 @@ export default function App() {
       `${window.location.pathname}${next.toString() ? `?${next}` : ""}`,
     );
   }, [query, priority, assignee]);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("kanban-theme", theme);
+  }, [theme]);
 
   const assignees = [
     ...new Set(tasks.map((task) => task.assignee).filter(Boolean)),
@@ -281,28 +298,31 @@ export default function App() {
   };
 
   return (
-    <div className="app-shell">
-      <div className="app-container">
-        <header className="app-header">
-          <div>
-            <div className="workspace-label">
-              <span className="workspace-dot" /> Orbit workspace
-            </div>
-            <h1 className="app-title">
-              Project pulse<span className="app-title-mark">.</span>
-            </h1>
-            <p className="app-subtitle">
-              A clear place for the work in motion, the work waiting, and the
-              work worth celebrating.
-            </p>
+    <div className={`app-shell ${theme === "dark" ? "theme-dark" : "theme-light"}`}>
+      <Sidebar />
+      <div className="app-main">
+        <header className="topbar">
+          <div className="topbar-left"><button className="icon-button mobile-menu" aria-label="Open navigation"><PanelLeft size={16} /></button><div className="workspace-switcher"><span className="workspace-avatar">D</span><span>Demo Workspace</span><ChevronDown size={13} /></div><span className="crumb-chevron">›</span><span className="topbar-muted">Cycles</span><span className="crumb-chevron">›</span><strong>Test Sprint</strong><button className="crumb-icon" aria-label="Favorite sprint"><Star size={15} /></button><button className="crumb-icon" aria-label="More sprint actions"><MoreHorizontal size={16} /></button></div>
+          <div className="topbar-actions"><button className="icon-button" aria-label="Open command menu"><Command size={16} /></button><button className="icon-button" aria-label="Open board settings"><Settings2 size={16} /></button>
+            <button
+              type="button"
+              onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")}
+              className="theme-toggle icon-button"
+              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+              title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            >
+              {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
+            </button>
+            <button
+              onClick={() => setModal({ task: null })}
+              className="primary-button"
+            >
+              <Plus size={18} /> New task
+            </button>
           </div>
-          <button
-            onClick={() => setModal({ task: null })}
-            className="primary-button"
-          >
-            <Plus size={18} /> New task
-          </button>
         </header>
+        <main className="app-container">
+        <div className="reference-context"><div className="issue-total">{visible.length} issues</div><div className="reference-filter-row"><button className="reference-filter"><UserRound size={13} /><span>Assignee</span><span className="reference-filter-word">is</span><span className="reference-assignee">{assignee || "Everyone"}</span>{assignee && <X size={13} onClick={() => setAssignee("")} />}</button><button className="reference-filter-add" aria-label="Add filter"><Plus size={15} /></button></div></div>
         <section className="board-toolbar">
           <div className="toolbar-controls">
             <label className="search-field">
@@ -341,7 +361,7 @@ export default function App() {
             </select>
           </div>
           <div className="board-status">
-            <span>{visible.length} tasks</span>
+            <span>{visible.length} issues</span>
             <span className="status-divider" />
             <span className="live-status">
               <span className={`live-dot ${connectionState !== "live" ? "is-reconnecting" : ""}`} />{" "}
@@ -371,6 +391,7 @@ export default function App() {
             </section>
           </DndContext>
         )}
+        </main>
       </div>
       {toast && (
         <div className="toast">
@@ -446,6 +467,9 @@ function TaskCard({ task, onOpen }) {
     transition,
     isDragging,
   } = useSortable({ id: task.id });
+  const StatusIcon = columns.find((column) => column.id === task.status)?.icon || Circle;
+  const taskNumber = task.id.startsWith("task-") ? task.id.replace("task-", "").padStart(3, "0") : task.id.slice(0, 6).toUpperCase();
+  const updatedDate = task.updatedAt ? new Date(task.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Recently";
   return (
     <article
       ref={setNodeRef}
@@ -455,6 +479,7 @@ function TaskCard({ task, onOpen }) {
       className={`task-card group ${isDragging ? "is-dragging" : ""}`}
     >
       <div className="task-card-top">
+        <span className="task-id">DEMO-{taskNumber}</span>
         <span
           className={`priority-badge priority-${task.priority}`}
         >
@@ -469,14 +494,16 @@ function TaskCard({ task, onOpen }) {
           <GripVertical size={17} />
         </button>
       </div>
-      <h3 className="task-title">
-        {task.title}
-      </h3>
+      <h3 className="task-title"><StatusIcon size={14} className={`task-status-icon status-${task.status}`} />{task.title}</h3>
       <p className="task-description">
         {task.description || "No description yet."}
       </p>
+      <div className="task-tags">
+        <span className="task-chip"><span className={`chip-dot priority-dot-${task.priority}`} />{task.priority}</span>
+        <span className="task-chip"><span className="chip-dot assignee-dot" />{task.assignee || "Unassigned"}</span>
+      </div>
       <div className="task-footer">
-        <span>{task.assignee || "Unassigned"}</span>
+        <span>Updated {updatedDate}</span>
         <Pencil
           size={13}
           className="edit-icon"
