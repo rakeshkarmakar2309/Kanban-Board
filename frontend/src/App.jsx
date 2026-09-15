@@ -66,6 +66,16 @@ const pageLabels = {
   settings: "Settings",
 };
 const boardPages = new Set(["home", "issues", "backlog", "upcoming"]);
+const getInitials = (name) => name.split(" ").filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+const uniqueUsers = (users) => {
+  const seen = new Set();
+  return users.filter((user) => {
+    const key = user.name.trim().toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
 async function request(url, options = {}) {
   const response = await fetch(`${API_BASE_URL}${url}`, {
     headers: { "Content-Type": "application/json" },
@@ -80,6 +90,9 @@ function sortTasks(items) {
     (a, b) => a.status.localeCompare(b.status) || a.position - b.position,
   );
 }
+function upsertTask(items, task) {
+  return sortTasks([...items.filter((item) => item.id !== task.id), task]);
+}
 
 export default function App() {
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
@@ -92,6 +105,17 @@ export default function App() {
   const [modal, setModal] = useState(null);
   const [toast, setToast] = useState("");
   const [connectionState, setConnectionState] = useState("connecting");
+  const [currentUserName, setCurrentUserName] = useState(() =>
+    localStorage.getItem("kanban-authenticated") === "false"
+      ? null
+      : localStorage.getItem("kanban-user-name") || "Maya Chen",
+  );
+  const [activeUsers, setActiveUsers] = useState(() => {
+    const name = localStorage.getItem("kanban-authenticated") === "false"
+      ? null
+      : localStorage.getItem("kanban-user-name") || "Maya Chen";
+    return name ? [{ name, initials: getInitials(name) }] : [];
+  });
   const [theme, setTheme] = useState(
     () => localStorage.getItem("kanban-theme") || "dark",
   );
@@ -133,42 +157,52 @@ export default function App() {
       ),
     );
   };
+  const reconcileEvent = (event) => {
+    const task = JSON.parse(event.data);
+    if (pending.current.has(task.id)) {
+      deferredEvents.current.set(task.id, { type: event.type, task });
+      return;
+    }
+    setTasks((current) =>
+      event.type === "task-deleted"
+        ? current.filter((item) => item.id !== task.id)
+        : sortTasks([...current.filter((item) => item.id !== task.id), task]),
+    );
+  };
   useEffect(() => {
-    let events;
     let cancelled = false;
-    const reconcileEvent = (event) => {
-      const task = JSON.parse(event.data);
-      if (pending.current.has(task.id)) {
-        deferredEvents.current.set(task.id, { type: event.type, task });
-        return;
-      }
-      setTasks((current) =>
-        event.type === "task-deleted"
-          ? current.filter((item) => item.id !== task.id)
-          : sortTasks([
-              ...current.filter((item) => item.id !== task.id),
-              task,
-            ]),
-      );
-    };
     request("/api/board")
       .then((board) => {
-        if (cancelled) return;
-        setTasks(board);
-        events = new EventSource(`${API_BASE_URL}/api/events`);
-        events.onopen = () => setConnectionState("live");
-        events.onerror = () => setConnectionState("reconnecting");
-        events.addEventListener("task-created", reconcileEvent);
-        events.addEventListener("task-updated", reconcileEvent);
-        events.addEventListener("task-deleted", reconcileEvent);
+        if (!cancelled) setTasks(board);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-    return () => {
-      cancelled = true;
-      events?.close();
-    };
+    return () => { cancelled = true; };
   }, []);
+  useEffect(() => {
+    setConnectionState("connecting");
+    if (currentUserName) {
+      setActiveUsers([{ name: currentUserName, initials: getInitials(currentUserName) }]);
+    } else {
+      setActiveUsers([]);
+    }
+    request("/api/presence")
+      .then((users) => {
+        setActiveUsers((current) => uniqueUsers([...users, ...current]));
+      })
+      .catch(() => undefined);
+    const eventUrl = currentUserName
+      ? `${API_BASE_URL}/api/events?user=${encodeURIComponent(currentUserName)}`
+      : `${API_BASE_URL}/api/events`;
+    const events = new EventSource(eventUrl);
+    events.onopen = () => setConnectionState("live");
+    events.onerror = () => setConnectionState("reconnecting");
+    events.addEventListener("presence-updated", (event) => setActiveUsers(uniqueUsers(JSON.parse(event.data))));
+    events.addEventListener("task-created", reconcileEvent);
+    events.addEventListener("task-updated", reconcileEvent);
+    events.addEventListener("task-deleted", reconcileEvent);
+    return () => events.close();
+  }, [currentUserName]);
   useEffect(() => {
     const next = new URLSearchParams();
     if (query) next.set("search", query);
@@ -212,6 +246,17 @@ export default function App() {
     window.location.hash = `/${page}`;
     setActivePage(page);
   };
+  const login = () => {
+    const name = window.prompt("Enter your display name", "Maya Chen")?.trim();
+    if (!name) return;
+    localStorage.setItem("kanban-user-name", name);
+    localStorage.setItem("kanban-authenticated", "true");
+    setCurrentUserName(name);
+  };
+  const logout = () => {
+    localStorage.setItem("kanban-authenticated", "false");
+    setCurrentUserName(null);
+  };
   const openTask = (task) => setModal({ task });
   const saveTask = async (draft, existingId) => {
     const snapshot = tasks;
@@ -241,7 +286,7 @@ export default function App() {
       setTasks((current) =>
         existingId
           ? current.map((task) => (task.id === existingId ? result : task))
-          : sortTasks([...current, result]),
+          : upsertTask(current, result),
       );
       notify(existingId ? "Task updated" : "Task created");
       return true;
@@ -342,7 +387,7 @@ export default function App() {
 
   return (
     <div className={`app-shell ${theme === "dark" ? "theme-dark" : "theme-light"}`}>
-      <Sidebar activePage={activePage} onNavigate={navigateTo} />
+      <Sidebar activePage={activePage} onNavigate={navigateTo} activeUsers={activeUsers} currentUserName={currentUserName} onLogin={login} onLogout={logout} />
       <div className="app-main">
         <header className="topbar">
           <div className="topbar-left"><button className="icon-button mobile-menu" aria-label="Open navigation"><PanelLeft size={16} /></button><div className="workspace-switcher"><span className="workspace-avatar">D</span><span>Demo Workspace</span><ChevronDown size={13} /></div><span className="crumb-chevron">›</span><span className="topbar-muted">{activePage === "home" || activePage === "issues" ? "Cycles" : "Views"}</span><span className="crumb-chevron">›</span><strong>{pageLabels[activePage]}</strong><button className="crumb-icon" aria-label="Favorite page"><Star size={15} /></button><button className="crumb-icon" aria-label="More page actions"><MoreHorizontal size={16} /></button></div>

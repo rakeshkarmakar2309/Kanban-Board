@@ -24,6 +24,12 @@ button { cursor: pointer; }
 	.sidebar-nav { @apply mt-5 flex-1; }
 	.nav-label { @apply px-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-ink/35; }
 	.nav-label-spaced { @apply mt-5; }
+	.active-users { @apply space-y-1 px-1; }
+	.active-user { @apply flex items-center gap-2 rounded-md px-1 py-1 text-xs text-ink/55; }
+	.active-user-avatar { @apply relative flex h-6 w-6 items-center justify-center rounded-full bg-[#dce8ff] text-[9px] font-bold text-[#31578e]; }
+	.active-user-dot { @apply absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-white bg-emerald-500; }
+	.active-user-name { @apply truncate; }
+	.active-users-empty { @apply block px-1 text-[11px] text-ink/35; }
 	.nav-item { @apply flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-ink/60 transition hover:bg-ink/5 hover:text-ink; }
 	.nav-item.active { @apply bg-ink/5 font-semibold text-ink; }
 	.nav-count { @apply ml-auto text-[10px] text-ink/35; }
@@ -32,6 +38,7 @@ button { cursor: pointer; }
 	.team-dot { @apply h-2 w-2 rounded-sm; }
 	.team-dot.green { @apply bg-emerald-500; }
 	.sidebar-footer { @apply flex items-center justify-between border-t border-ink/10 pt-3; }
+	.footer-actions { @apply min-w-0 flex-1; }
 	.user-avatar { @apply flex h-7 w-7 items-center justify-center rounded-full bg-[#dce8ff] text-[10px] font-bold text-[#31578e]; }
 	.topbar { @apply flex h-12 items-center justify-between border-b border-ink/10 px-5 sm:px-7 lg:pl-[248px] lg:pr-9; }
 	.topbar-left, .topbar-actions, .workspace-switcher { @apply flex items-center gap-2; }
@@ -148,6 +155,10 @@ button { cursor: pointer; }
 	.theme-dark .sidebar-search { @apply border-white/10 bg-[#191c20] text-white/40; }
 	.theme-dark .sidebar-search kbd { @apply border-white/10 text-white/30; }
 	.theme-dark .nav-label { @apply text-white/30; }
+	.theme-dark .active-user { @apply text-white/55; }
+	.theme-dark .active-user-avatar { @apply border border-white/10 bg-white/10 text-white/70; }
+	.theme-dark .active-user-dot { @apply border-[#111315]; }
+	.theme-dark .active-users-empty { @apply text-white/30; }
 	.theme-dark .nav-item { @apply text-white/55 hover:bg-white/5 hover:text-white; }
 	.theme-dark .nav-item.active { @apply bg-white/10 text-white; }
 	.theme-dark .team-item { @apply text-white/80; }

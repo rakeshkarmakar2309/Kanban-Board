@@ -1,14 +1,10 @@
 import {
-  Activity,
-  Bot,
   CircleDot,
-  FolderKanban,
   Inbox,
-  ListChecks,
+  LogIn,
+  LogOut,
   Milestone,
-  MoreHorizontal,
   PanelsTopLeft,
-  GitPullRequest,
   Search,
   Settings2,
 } from "lucide-react";
@@ -18,20 +14,11 @@ const pageLinks = [
   { id: "issues", label: "Issues", icon: CircleDot },
   { id: "backlog", label: "Backlog", icon: Inbox },
   { id: "upcoming", label: "Upcoming", icon: Milestone },
-];
-const secondaryLinks = [
-  { id: "pulse", label: "Pulse", icon: Activity },
-  { id: "inbox", label: "Inbox", icon: Inbox, count: "9+" },
-  { id: "my-issues", label: "My issues", icon: ListChecks },
-  { id: "reviews", label: "Reviews", icon: GitPullRequest },
-  { id: "agent", label: "Agent", icon: Bot },
   { id: "cycles", label: "Cycles", icon: Milestone },
   { id: "current", label: "Current", icon: CircleDot },
-  { id: "projects", label: "Projects", icon: FolderKanban },
-  { id: "views", label: "Views", icon: PanelsTopLeft },
 ];
 
-export default function Sidebar({ activePage, onNavigate }) {
+export default function Sidebar({ activePage, onNavigate, activeUsers = [], currentUserName, onLogin, onLogout }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -46,32 +33,32 @@ export default function Sidebar({ activePage, onNavigate }) {
       </div>
       <nav className="sidebar-nav" aria-label="Workspace navigation">
         <p className="nav-label">Workspace</p>
-        {secondaryLinks.slice(0, 5).map(({ id, label, icon: Icon, count }) => (
-          <button key={id} type="button" className={`nav-item ${activePage === id ? "active" : ""}`} onClick={() => onNavigate(id)}>
-            <Icon size={14} /> {label} {count && <span className="nav-count">{count}</span>}
-          </button>
-        ))}
-        <p className="nav-label nav-label-spaced">Your teams</p>
-        <button type="button" className="nav-item team-item" onClick={() => onNavigate("workspace")}><span className="team-dot green" /> Demo Workspace <MoreHorizontal size={14} className="nav-more" /></button>
         {pageLinks.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             type="button"
-            className={`nav-item sub-item ${activePage === id ? "active" : ""}`}
+            className={`nav-item sub-item workspace-page ${activePage === id ? "active" : ""}`}
             onClick={() => onNavigate(id)}
           >
             <Icon size={13} /> {label}
           </button>
         ))}
-        {secondaryLinks.slice(5).map(({ id, label, icon: Icon }) => (
-          <button key={id} type="button" className={`nav-item sub-item ${activePage === id ? "active" : ""}`} onClick={() => onNavigate(id)}>
-            <Icon size={13} /> {label}
-          </button>
-        ))}
+        <p className="nav-label nav-label-spaced">Active users</p>
+        <div className="active-users" aria-label="Active collaborators">
+          {activeUsers.length ? activeUsers.map((user) => (
+            <div className="active-user" key={user.name} title={`${user.name} is active`}>
+              <span className="active-user-avatar"><span className="active-user-dot" />{user.initials}</span>
+              <span className="active-user-name">{user.name}</span>
+            </div>
+          )) : <span className="active-users-empty">Waiting for collaborators</span>}
+        </div>
       </nav>
       <div className="sidebar-footer">
-        <button type="button" className={`nav-item ${activePage === "settings" ? "active" : ""}`} onClick={() => onNavigate("settings")}><Settings2 size={14} /> Settings</button>
-        <span className="user-avatar">MC</span>
+        <div className="footer-actions">
+          <button type="button" className={`nav-item ${activePage === "settings" ? "active" : ""}`} onClick={() => onNavigate("settings")}><Settings2 size={14} /> Settings</button>
+          {currentUserName ? <button type="button" className="nav-item" onClick={onLogout}><LogOut size={14} /> Log out</button> : <button type="button" className="nav-item" onClick={onLogin}><LogIn size={14} /> Log in</button>}
+        </div>
+        <span className="user-avatar">{currentUserName ? currentUserName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase() : "--"}</span>
       </div>
     </aside>
   );

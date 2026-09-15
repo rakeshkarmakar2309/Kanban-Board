@@ -13,6 +13,7 @@ const eventService = new EventService();
 const server = http.createServer(async (request, response) => {
   const url = new URL(request.url, `http://${request.headers.host}`);
   request.url = url.pathname;
+  request.userName = url.searchParams.get("user")?.trim() || null;
 
   if (handleEventRoutes(request, response, eventService)) return;
   if (handleBoardRoutes(request, response, taskService)) return;
