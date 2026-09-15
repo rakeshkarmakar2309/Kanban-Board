@@ -320,30 +320,36 @@ export default function App() {
   const moveTask = async (activeId, overId) => {
     const active = tasks.find((task) => task.id === activeId);
     if (!active) return;
-    const target = columns.some((column) => column.id === overId)
+    const sourceStatus = active.status;
+    const targetStatus = columns.some((column) => column.id === overId)
       ? overId
-      : tasks.find((task) => task.id === overId)?.status || active.status;
-    const siblings = tasks
-      .filter((task) => task.status === target && task.id !== activeId)
+      : tasks.find((task) => task.id === overId)?.status || sourceStatus;
+    const sourceItems = tasks
+      .filter((task) => task.status === sourceStatus && task.id !== activeId)
       .sort((a, b) => a.position - b.position);
-    const index = columns.some((column) => column.id === overId)
-      ? siblings.length
-      : Math.max(
-          0,
-          siblings.findIndex((task) => task.id === overId),
-        );
-    const next = [
-      ...siblings.slice(0, index),
-      { ...active, status: target },
-      ...siblings.slice(index),
+    const targetItems = sourceStatus === targetStatus
+      ? sourceItems
+      : tasks.filter((task) => task.status === targetStatus).sort((a, b) => a.position - b.position);
+    const overIndex = columns.some((column) => column.id === overId)
+      ? targetItems.length
+      : Math.max(0, targetItems.findIndex((task) => task.id === overId));
+    const reorderedTarget = [
+      ...targetItems.slice(0, overIndex),
+      { ...active, status: targetStatus },
+      ...targetItems.slice(overIndex),
     ];
     const changed = tasks
-      .filter((task) => task.status === active.status || task.status === target)
+      .filter((task) => task.status === sourceStatus || task.status === targetStatus)
       .map((task) => {
-        const updated = next.find((item) => item.id === task.id);
-        return updated
-          ? { ...task, status: updated.status, position: next.indexOf(updated) }
-          : task;
+        const list = task.id === activeId
+          ? reorderedTarget
+          : task.status === sourceStatus && sourceStatus !== targetStatus
+            ? sourceItems
+            : reorderedTarget;
+        const position = list.findIndex((item) => item.id === task.id);
+        return position === -1
+          ? task
+          : { ...task, status: list[position].status, position };
       });
     const snapshot = tasks;
     setTasks((current) =>
@@ -354,14 +360,10 @@ export default function App() {
         ...changed,
       ]),
     );
-    changed
-      .filter((task) => task.status === target || task.id === activeId)
-      .forEach((task) => pending.current.add(task.id));
+    changed.forEach((task) => pending.current.add(task.id));
     try {
       await Promise.all(
-        changed
-          .filter((task) => task.status === target || task.id === activeId)
-          .map((task) =>
+        changed.map((task) =>
             request(`/api/tasks/${task.id}`, {
               method: "PATCH",
               body: JSON.stringify({
@@ -369,7 +371,7 @@ export default function App() {
                 position: task.position,
               }),
             }),
-          ),
+            ),
       );
     } catch (e) {
       setTasks(snapshot);

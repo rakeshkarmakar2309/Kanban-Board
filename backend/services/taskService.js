@@ -58,8 +58,10 @@ class TaskService {
       ),
     );
     task.updatedAt = new Date().toISOString();
-    if (previousStatus !== task.status) this.normalize(previousStatus);
-    this.normalize(task.status);
+    if (input.position === undefined) {
+      if (previousStatus !== task.status) this.normalize(previousStatus);
+      this.normalize(task.status);
+    }
     return task;
   }
 

@@ -28,6 +28,15 @@ const server = http.createServer(async (request, response) => {
   response.end("Use the Vite frontend at http://localhost:5173");
 });
 
+server.on("error", (error) => {
+  if (error.code === "EADDRINUSE") {
+    console.error(`Port ${port} is already in use. Stop the existing backend or start with a different PORT.`);
+    process.exitCode = 1;
+    return;
+  }
+  throw error;
+});
+
 server.listen(port, () =>
   console.log(`API listening on http://localhost:${port}`),
 );
