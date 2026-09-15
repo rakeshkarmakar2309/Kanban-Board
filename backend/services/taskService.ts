@@ -1,8 +1,11 @@
 const crypto = require("crypto");
 const { columns, priorities, editableFields } = require("../constants/board");
 const { taskExamples } = require("../constants/examples");
+import type { Task } from "../types";
 
 class TaskService {
+  private tasks: Map<string, Task>;
+
   constructor() {
     this.tasks = new Map(
       taskExamples.map((task) => [
