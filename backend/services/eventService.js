@@ -1,8 +1,4 @@
-import type { ServerResponse } from "node:http";
-
 class EventService {
-  private clients: Set<ServerResponse>;
-
   constructor() {
     this.clients = new Set();
   }

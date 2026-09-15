@@ -1,1 +1,1 @@
-{"name":"kanban-board","version":"1.0.0","private":true,"scripts":{"start":"node --import tsx --env-file=.env backend/server.ts","dev":"npm --prefix frontend run dev","typecheck":"tsc --noEmit -p tsconfig.json","typecheck:frontend":"npm --prefix frontend exec tsc -- --noEmit"},"devDependencies":{"@types/node":"^22.10.2","tsx":"^4.19.2","typescript":"^5.7.2"}}
+{"name":"kanban-board","version":"1.0.0","private":true,"scripts":{"start":"node --env-file=.env backend/server.js","dev":"npm --prefix frontend run dev"}}
