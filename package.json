@@ -1,1 +1,1 @@
-{"name":"kanban-board","version":"1.0.0","private":true,"scripts":{"start":"node backend/server.js","dev":"npm --prefix frontend run dev"}}
+{"name":"kanban-board","version":"1.0.0","private":true,"scripts":{"start":"node --env-file=.env backend/server.js","dev":"npm --prefix frontend run dev"}}

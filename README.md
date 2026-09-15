@@ -6,11 +6,11 @@ A collaborative Kanban board built with React, Tailwind CSS, a small Node HTTP A
 
 ```bash
 npm install --prefix frontend
-node backend/server.js
+npm start
 npm run dev
 ```
 
-Open `http://localhost:5173`. The Vite proxy forwards `/api` requests to the backend on port 3000.
+Open `http://localhost:5173`. Copy `.env.example` to `.env` to change the backend or frontend ports. Set `frontend/.env` `VITE_API_URL` when the frontend must call a backend directly instead of using the Vite proxy.
 
 ## Architecture
 

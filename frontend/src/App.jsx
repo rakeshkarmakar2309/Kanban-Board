@@ -37,8 +37,9 @@ const columns = [
   },
   { id: "done", label: "Done", color: "bg-mint", icon: Check },
 ];
+const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 async function request(url, options = {}) {
-  const response = await fetch(url, {
+  const response = await fetch(`${API_BASE_URL}${url}`, {
     headers: { "Content-Type": "application/json" },
     ...options,
   });
@@ -119,7 +120,7 @@ export default function App() {
       .then((board) => {
         if (cancelled) return;
         setTasks(board);
-        events = new EventSource("/api/events");
+        events = new EventSource(`${API_BASE_URL}/api/events`);
         events.onopen = () => setConnectionState("live");
         events.onerror = () => setConnectionState("reconnecting");
         events.addEventListener("task-created", reconcileEvent);
