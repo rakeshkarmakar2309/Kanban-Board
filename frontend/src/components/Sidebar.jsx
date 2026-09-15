@@ -13,7 +13,25 @@ import {
   Settings2,
 } from "lucide-react";
 
-export default function Sidebar() {
+const pageLinks = [
+  { id: "home", label: "Home", icon: PanelsTopLeft },
+  { id: "issues", label: "Issues", icon: CircleDot },
+  { id: "backlog", label: "Backlog", icon: Inbox },
+  { id: "upcoming", label: "Upcoming", icon: Milestone },
+];
+const secondaryLinks = [
+  { id: "pulse", label: "Pulse", icon: Activity },
+  { id: "inbox", label: "Inbox", icon: Inbox, count: "9+" },
+  { id: "my-issues", label: "My issues", icon: ListChecks },
+  { id: "reviews", label: "Reviews", icon: GitPullRequest },
+  { id: "agent", label: "Agent", icon: Bot },
+  { id: "cycles", label: "Cycles", icon: Milestone },
+  { id: "current", label: "Current", icon: CircleDot },
+  { id: "projects", label: "Projects", icon: FolderKanban },
+  { id: "views", label: "Views", icon: PanelsTopLeft },
+];
+
+export default function Sidebar({ activePage, onNavigate }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -28,23 +46,31 @@ export default function Sidebar() {
       </div>
       <nav className="sidebar-nav" aria-label="Workspace navigation">
         <p className="nav-label">Workspace</p>
-        <a className="nav-item" href="#"><Activity size={14} /> Pulse</a>
-        <a className="nav-item" href="#"><Inbox size={14} /> Inbox <span className="nav-count">9+</span></a>
-        <a className="nav-item" href="#"><ListChecks size={14} /> My issues</a>
-        <a className="nav-item" href="#"><GitPullRequest size={14} /> Reviews</a>
-        <a className="nav-item" href="#"><Bot size={14} /> Agent</a>
+        {secondaryLinks.slice(0, 5).map(({ id, label, icon: Icon, count }) => (
+          <button key={id} type="button" className={`nav-item ${activePage === id ? "active" : ""}`} onClick={() => onNavigate(id)}>
+            <Icon size={14} /> {label} {count && <span className="nav-count">{count}</span>}
+          </button>
+        ))}
         <p className="nav-label nav-label-spaced">Your teams</p>
-        <a className="nav-item team-item" href="#"><span className="team-dot green" /> Demo Workspace <MoreHorizontal size={14} className="nav-more" /></a>
-        <a className="nav-item sub-item active" href="#"><PanelsTopLeft size={13} /> Home</a>
-        <a className="nav-item sub-item active" href="#"><CircleDot size={13} /> Issues</a>
-        <a className="nav-item sub-item" href="#"><Milestone size={13} /> Cycles</a>
-        <a className="nav-item sub-item" href="#"><CircleDot size={13} /> Current</a>
-        <a className="nav-item sub-item" href="#"><Milestone size={13} /> Upcoming</a>
-        <a className="nav-item sub-item" href="#"><FolderKanban size={13} /> Projects</a>
-        <a className="nav-item sub-item" href="#"><PanelsTopLeft size={13} /> Views</a>
+        <button type="button" className="nav-item team-item" onClick={() => onNavigate("workspace")}><span className="team-dot green" /> Demo Workspace <MoreHorizontal size={14} className="nav-more" /></button>
+        {pageLinks.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            className={`nav-item sub-item ${activePage === id ? "active" : ""}`}
+            onClick={() => onNavigate(id)}
+          >
+            <Icon size={13} /> {label}
+          </button>
+        ))}
+        {secondaryLinks.slice(5).map(({ id, label, icon: Icon }) => (
+          <button key={id} type="button" className={`nav-item sub-item ${activePage === id ? "active" : ""}`} onClick={() => onNavigate(id)}>
+            <Icon size={13} /> {label}
+          </button>
+        ))}
       </nav>
       <div className="sidebar-footer">
-        <button className="nav-item"><Settings2 size={14} /> Settings</button>
+        <button type="button" className={`nav-item ${activePage === "settings" ? "active" : ""}`} onClick={() => onNavigate("settings")}><Settings2 size={14} /> Settings</button>
         <span className="user-avatar">MC</span>
       </div>
     </aside>

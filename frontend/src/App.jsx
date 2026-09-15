@@ -48,6 +48,24 @@ const columns = [
   { id: "done", label: "Done", color: "tone-blue", icon: BadgeCheck },
 ];
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+const pageLabels = {
+  home: "Home",
+  issues: "Issues",
+  backlog: "Backlog",
+  upcoming: "Upcoming",
+  pulse: "Pulse",
+  inbox: "Inbox",
+  "my-issues": "My issues",
+  reviews: "Reviews",
+  agent: "Agent",
+  workspace: "Demo Workspace",
+  cycles: "Cycles",
+  current: "Current",
+  projects: "Projects",
+  views: "Views",
+  settings: "Settings",
+};
+const boardPages = new Set(["home", "issues", "backlog", "upcoming"]);
 async function request(url, options = {}) {
   const response = await fetch(`${API_BASE_URL}${url}`, {
     headers: { "Content-Type": "application/json" },
@@ -77,6 +95,10 @@ export default function App() {
   const [theme, setTheme] = useState(
     () => localStorage.getItem("kanban-theme") || "dark",
   );
+  const [activePage, setActivePage] = useState(() => {
+    const page = window.location.hash.replace("#/", "");
+    return pageLabels[page] ? page : "home";
+  });
   const pending = useRef(new Set());
   const snapshots = useRef(new Map());
   const deferredEvents = useRef(new Map());
@@ -155,9 +177,17 @@ export default function App() {
     window.history.replaceState(
       null,
       "",
-      `${window.location.pathname}${next.toString() ? `?${next}` : ""}`,
+      `${window.location.pathname}${next.toString() ? `?${next}` : ""}${window.location.hash}`,
     );
   }, [query, priority, assignee]);
+  useEffect(() => {
+    const handleHashChange = () => {
+      const page = window.location.hash.replace("#/", "");
+      setActivePage(pageLabels[page] ? page : "home");
+    };
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem("kanban-theme", theme);
@@ -172,6 +202,17 @@ export default function App() {
       (!priority || task.priority === priority) &&
       (!assignee || task.assignee === assignee),
   );
+  const pageTasks = visible.filter((task) => {
+    if (activePage === "backlog") return task.status === "backlog" || task.status === "todo";
+    if (activePage === "upcoming") return task.status === "backlog" || task.status === "todo";
+    return true;
+  });
+  const pageCountLabel = activePage === "home" ? "tasks" : "issues";
+  const navigateTo = (page) => {
+    window.location.hash = `/${page}`;
+    setActivePage(page);
+  };
+  const openTask = (task) => setModal({ task });
   const saveTask = async (draft, existingId) => {
     const snapshot = tasks;
     const optimistic = {
@@ -203,9 +244,11 @@ export default function App() {
           : sortTasks([...current, result]),
       );
       notify(existingId ? "Task updated" : "Task created");
+      return true;
     } catch (e) {
       if (existingId) setTasks(snapshots.current.get(existingId));
       notify(`Could not save task: ${e.message}`);
+      return false;
     } finally {
       if (existingId) {
         releasePending([existingId], new Map([[existingId, committedTask]]));
@@ -299,10 +342,10 @@ export default function App() {
 
   return (
     <div className={`app-shell ${theme === "dark" ? "theme-dark" : "theme-light"}`}>
-      <Sidebar />
+      <Sidebar activePage={activePage} onNavigate={navigateTo} />
       <div className="app-main">
         <header className="topbar">
-          <div className="topbar-left"><button className="icon-button mobile-menu" aria-label="Open navigation"><PanelLeft size={16} /></button><div className="workspace-switcher"><span className="workspace-avatar">D</span><span>Demo Workspace</span><ChevronDown size={13} /></div><span className="crumb-chevron">›</span><span className="topbar-muted">Cycles</span><span className="crumb-chevron">›</span><strong>Test Sprint</strong><button className="crumb-icon" aria-label="Favorite sprint"><Star size={15} /></button><button className="crumb-icon" aria-label="More sprint actions"><MoreHorizontal size={16} /></button></div>
+          <div className="topbar-left"><button className="icon-button mobile-menu" aria-label="Open navigation"><PanelLeft size={16} /></button><div className="workspace-switcher"><span className="workspace-avatar">D</span><span>Demo Workspace</span><ChevronDown size={13} /></div><span className="crumb-chevron">›</span><span className="topbar-muted">{activePage === "home" || activePage === "issues" ? "Cycles" : "Views"}</span><span className="crumb-chevron">›</span><strong>{pageLabels[activePage]}</strong><button className="crumb-icon" aria-label="Favorite page"><Star size={15} /></button><button className="crumb-icon" aria-label="More page actions"><MoreHorizontal size={16} /></button></div>
           <div className="topbar-actions"><button className="icon-button" aria-label="Open command menu"><Command size={16} /></button><button className="icon-button" aria-label="Open board settings"><Settings2 size={16} /></button>
             <button
               type="button"
@@ -322,7 +365,8 @@ export default function App() {
           </div>
         </header>
         <main className="app-container">
-        <div className="reference-context"><div className="issue-total">{visible.length} issues</div><div className="reference-filter-row"><button className="reference-filter"><UserRound size={13} /><span>Assignee</span><span className="reference-filter-word">is</span><span className="reference-assignee">{assignee || "Everyone"}</span>{assignee && <X size={13} onClick={() => setAssignee("")} />}</button><button className="reference-filter-add" aria-label="Add filter"><Plus size={15} /></button></div></div>
+        {!boardPages.has(activePage) ? <EmptyPage title={pageLabels[activePage]} /> : <>
+        <div className="reference-context"><div className="issue-total">{pageTasks.length} {pageCountLabel}</div><div className="reference-filter-row"><button className="reference-filter"><UserRound size={13} /><span>Assignee</span><span className="reference-filter-word">is</span><span className="reference-assignee">{assignee || "Everyone"}</span>{assignee && <X size={13} onClick={() => setAssignee("")} />}</button><button className="reference-filter-add" aria-label="Add filter"><Plus size={15} /></button></div></div>
         <section className="board-toolbar">
           <div className="toolbar-controls">
             <label className="search-field">
@@ -361,7 +405,7 @@ export default function App() {
             </select>
           </div>
           <div className="board-status">
-            <span>{visible.length} issues</span>
+            <span>{pageTasks.length} {pageCountLabel}</span>
             <span className="status-divider" />
             <span className="live-status">
               <span className={`live-dot ${connectionState !== "live" ? "is-reconnecting" : ""}`} />{" "}
@@ -384,13 +428,14 @@ export default function App() {
                 <Column
                   key={column.id}
                   column={column}
-                  tasks={visible.filter((task) => task.status === column.id)}
-                  onOpen={(task) => setModal({ task })}
+                  tasks={pageTasks.filter((task) => task.status === column.id)}
+                  onOpen={openTask}
                 />
               ))}
             </section>
           </DndContext>
         )}
+        </>}
         </main>
       </div>
       {toast && (
@@ -400,16 +445,27 @@ export default function App() {
       )}
       {modal && (
         <TaskModal
+          key={modal.task?.id || "new-task"}
           task={modal.task}
           onClose={() => setModal(null)}
-          onSave={(draft) => {
-            saveTask(draft, modal.task?.id);
-            setModal(null);
+          onSave={async (draft) => {
+            const saved = await saveTask(draft, modal.task?.id);
+            if (saved) setModal(null);
           }}
           onDelete={deleteTask}
         />
       )}
     </div>
+  );
+}
+
+function EmptyPage({ title }) {
+  return (
+    <section className="empty-page">
+      <div className="empty-page-mark">O</div>
+      <h1 className="empty-page-title">{title}</h1>
+      <p className="empty-page-copy">This workspace view is ready for your next layer of work.</p>
+    </section>
   );
 }
 
@@ -475,7 +531,15 @@ function TaskCard({ task, onOpen }) {
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       {...attributes}
-      onClick={() => onOpen({ task })}
+          onClick={() => onOpen(task)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen(task);
+        }
+      }}
+      role="button"
+      tabIndex={0}
       className={`task-card group ${isDragging ? "is-dragging" : ""}`}
     >
       <div className="task-card-top">
@@ -504,10 +568,18 @@ function TaskCard({ task, onOpen }) {
       </div>
       <div className="task-footer">
         <span>Updated {updatedDate}</span>
-        <Pencil
-          size={13}
-          className="edit-icon"
-        />
+        <button
+          type="button"
+          className="edit-button"
+          aria-label={`Edit ${task.title}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen(task);
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <Pencil size={13} />
+        </button>
       </div>
     </article>
   );
@@ -523,6 +595,15 @@ function TaskModal({ task, onClose, onSave, onDelete }) {
     status: task?.status || "backlog",
   });
   const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    setDraft({
+      title: task?.title || "",
+      description: task?.description || "",
+      priority: task?.priority || "medium",
+      assignee: task?.assignee || "",
+      status: task?.status || "backlog",
+    });
+  }, [task]);
   const update = (key, value) =>
     setDraft((current) => ({ ...current, [key]: value }));
   const submit = async (e) => {

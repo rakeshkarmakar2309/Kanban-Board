@@ -49,6 +49,10 @@ button { cursor: pointer; }
 	.reference-filter-word { @apply border-l border-ink/10 pl-2 text-ink/35; }
 	.reference-assignee { @apply font-semibold text-ink/75; }
 	.reference-filter-add { @apply inline-flex h-7 w-7 items-center justify-center rounded-md text-ink/45 transition hover:bg-ink/5 hover:text-coral; }
+	.empty-page { @apply flex min-h-[520px] flex-col items-center justify-center rounded-md border border-dashed border-ink/10 bg-white/20 text-center; }
+	.empty-page-mark { @apply flex h-10 w-10 items-center justify-center rounded-xl bg-coral text-sm font-bold text-white shadow-lg shadow-coral/20; }
+	.empty-page-title { @apply mt-5 font-display text-xl font-bold; }
+	.empty-page-copy { @apply mt-2 text-sm text-ink/45; }
 	.heading-slash { @apply mx-1 text-ink/25; }
 	.heading-tools { @apply flex items-center gap-1; }
 	.view-button { @apply inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-ink/45 transition hover:bg-ink/5 hover:text-ink; }
@@ -120,6 +124,7 @@ button { cursor: pointer; }
 	.task-footer { @apply mt-3 flex items-center justify-between border-t border-ink/5 pt-2 text-[10px] font-semibold text-ink/45; }
 	.edit-icon { @apply opacity-0 transition; }
 	.group:hover .edit-icon { @apply opacity-100; }
+	.edit-button { @apply inline-flex rounded p-1 text-ink/35 transition hover:bg-ink/5 hover:text-coral; }
 	.toast { @apply fixed right-5 top-5 z-50 rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-white shadow-xl; }
 	.modal-backdrop { @apply fixed inset-0 z-40 flex items-end justify-center bg-ink/35 p-0 backdrop-blur-sm sm:items-center sm:p-5; }
 	.task-modal { @apply w-full max-w-xl rounded-t-2xl bg-white p-6 shadow-2xl sm:rounded-2xl; }
@@ -162,6 +167,8 @@ button { cursor: pointer; }
 	.theme-dark .reference-filter-word { @apply border-white/10 text-white/35; }
 	.theme-dark .reference-assignee { @apply text-white/80; }
 	.theme-dark .reference-filter-add { @apply text-white/45 hover:bg-white/5 hover:text-coral; }
+	.theme-dark .empty-page { @apply border-white/10 bg-white/[.02]; }
+	.theme-dark .empty-page-copy { @apply text-white/40; }
 	.theme-dark .app-header { @apply border-white/10; }
 	.theme-dark .workspace-label,
 	.theme-dark .app-subtitle,
