@@ -29,6 +29,7 @@ button { cursor: pointer; }
 	.status-divider { @apply h-1 w-1 rounded-full bg-mint; }
 	.live-status { @apply flex items-center gap-1.5; }
 	.live-dot { @apply h-2 w-2 animate-pulse rounded-full bg-emerald-500; }
+	.live-dot.is-reconnecting { @apply bg-amber-500; }
 	.loading-state { @apply rounded-2xl border border-dashed border-ink/15 bg-white/40 p-16 text-center text-sm text-ink/50; }
 	.error-state { @apply rounded-2xl border border-red-200 bg-red-50 p-8 text-center text-sm text-red-700; }
 	.board-grid { @apply grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4; }
@@ -49,7 +50,9 @@ button { cursor: pointer; }
 	.priority-high { @apply bg-[#ffe0dc] text-[#b33e2b]; }
 	.priority-medium { @apply bg-[#fff0a8] text-[#766000]; }
 	.priority-low { @apply bg-[#dce8ff] text-[#31578e]; }
-	.drag-handle { @apply cursor-grab text-ink/25 opacity-0 transition; }
+	.drag-handle { @apply cursor-grab text-ink/35 transition; }
+	.drag-handle:hover { @apply text-coral; }
+	.drag-handle:active { @apply cursor-grabbing; }
 	.task-title { @apply font-display text-sm font-bold leading-snug; }
 	.task-description { @apply mt-2 line-clamp-2 text-xs leading-relaxed text-ink/55; }
 	.task-footer { @apply mt-4 flex items-center justify-between border-t border-ink/5 pt-3 text-[11px] font-semibold text-ink/45; }

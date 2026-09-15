@@ -138,6 +138,13 @@ const server = http.createServer(async (req, res) => {
       const task = tasks.get(match[1]);
       if (!task) return json(res, 404, { error: "Task not found" });
       const input = await body(req);
+      if (input.status !== undefined && !columns.includes(input.status))
+        return json(res, 400, { error: "Invalid status" });
+      if (
+        input.position !== undefined &&
+        (!Number.isInteger(input.position) || input.position < 0)
+      )
+        return json(res, 400, { error: "Invalid position" });
       const before = task.status;
       Object.assign(
         task,

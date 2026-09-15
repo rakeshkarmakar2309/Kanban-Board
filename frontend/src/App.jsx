@@ -62,8 +62,10 @@ export default function App() {
   const [assignee, setAssignee] = useState(params.get("assignee") || "");
   const [modal, setModal] = useState(null);
   const [toast, setToast] = useState("");
+  const [connectionState, setConnectionState] = useState("connecting");
   const pending = useRef(new Set());
   const snapshots = useRef(new Map());
+  const deferredEvents = useRef(new Map());
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
@@ -72,16 +74,45 @@ export default function App() {
     setToast(message);
     window.setTimeout(() => setToast(""), 3500);
   };
+  const releasePending = (ids, localResults = new Map()) => {
+    ids.forEach((id) => pending.current.delete(id));
+    const queued = ids
+      .map((id) => [id, deferredEvents.current.get(id)])
+      .filter(([, event]) => event);
+    queued.forEach(([id]) => deferredEvents.current.delete(id));
+    if (!queued.length) return;
+    setTasks((current) =>
+      sortTasks(
+        queued.reduce((next, [id, event]) => {
+          const local = localResults.get(id);
+          const remoteIsNewer =
+            event.type === "task-deleted" ||
+            !local ||
+            new Date(event.task.updatedAt) > new Date(local.updatedAt);
+          if (!remoteIsNewer) return next;
+          return event.type === "task-deleted"
+            ? next.filter((item) => item.id !== id)
+            : [...next.filter((item) => item.id !== id), event.task];
+        }, current),
+      ),
+    );
+  };
   useEffect(() => {
     let events;
     let cancelled = false;
-    const apply = (event) => {
+    const reconcileEvent = (event) => {
       const task = JSON.parse(event.data);
-      if (pending.current.has(task.id)) return;
+      if (pending.current.has(task.id)) {
+        deferredEvents.current.set(task.id, { type: event.type, task });
+        return;
+      }
       setTasks((current) =>
         event.type === "task-deleted"
           ? current.filter((item) => item.id !== task.id)
-          : sortTasks([...current.filter((item) => item.id !== task.id), task]),
+          : sortTasks([
+              ...current.filter((item) => item.id !== task.id),
+              task,
+            ]),
       );
     };
     request("/api/board")
@@ -89,9 +120,11 @@ export default function App() {
         if (cancelled) return;
         setTasks(board);
         events = new EventSource("/api/events");
-        events.addEventListener("task-created", apply);
-        events.addEventListener("task-updated", apply);
-        events.addEventListener("task-deleted", apply);
+        events.onopen = () => setConnectionState("live");
+        events.onerror = () => setConnectionState("reconnecting");
+        events.addEventListener("task-created", reconcileEvent);
+        events.addEventListener("task-updated", reconcileEvent);
+        events.addEventListener("task-deleted", reconcileEvent);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -139,11 +172,13 @@ export default function App() {
         current.map((task) => (task.id === existingId ? optimistic : task)),
       );
     }
+    let committedTask = optimistic;
     try {
       const result = await request(
         existingId ? `/api/tasks/${existingId}` : "/api/tasks",
         { method: existingId ? "PATCH" : "POST", body: JSON.stringify(draft) },
       );
+      committedTask = result;
       setTasks((current) =>
         existingId
           ? current.map((task) => (task.id === existingId ? result : task))
@@ -155,7 +190,7 @@ export default function App() {
       notify(`Could not save task: ${e.message}`);
     } finally {
       if (existingId) {
-        pending.current.delete(existingId);
+        releasePending([existingId], new Map([[existingId, committedTask]]));
         snapshots.current.delete(existingId);
       }
     }
@@ -173,7 +208,7 @@ export default function App() {
       setTasks(snapshot);
       notify(`Could not delete task: ${e.message}`);
     } finally {
-      pending.current.delete(task.id);
+      releasePending([task.id]);
     }
   };
   const moveTask = async (activeId, overId) => {
@@ -234,7 +269,10 @@ export default function App() {
       setTasks(snapshot);
       notify(`Move rolled back: ${e.message}`);
     } finally {
-      changed.forEach((task) => pending.current.delete(task.id));
+      releasePending(
+        changed.map((task) => task.id),
+        new Map(changed.map((task) => [task.id, task])),
+      );
     }
   };
   const onDragEnd = ({ active, over }) => {
@@ -305,8 +343,8 @@ export default function App() {
             <span>{visible.length} tasks</span>
             <span className="status-divider" />
             <span className="live-status">
-              <span className="live-dot" />{" "}
-              Live
+              <span className={`live-dot ${connectionState !== "live" ? "is-reconnecting" : ""}`} />{" "}
+              {connectionState === "live" ? "Live" : connectionState === "connecting" ? "Connecting" : "Reconnecting"}
             </span>
           </div>
         </section>
